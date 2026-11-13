@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function validProfile(d) {
+      return d.nick is string && d.nick.size() >= 3 && d.nick.size() <= 15
+        && d.best is int && d.best >= 0 && d.best < 100000000
+        && d.coins is int && d.coins >= 0
+        && d.skin is string && d.skins is list && d.skins.size() <= 50
+        && d.upgrades is map;
+    }
+
+    match /users/{uid} {
+      // рейтинг публичный
+      allow read: if true;
+
+      allow create: if request.auth != null && request.auth.uid == uid
+        && validProfile(request.resource.data);
+
+      // ник менять нельзя, рекорд может только расти
+      allow update: if request.auth != null && request.auth.uid == uid
+        && validProfile(request.resource.data)
+        && request.resource.data.nick == resource.data.nick
+        && request.resource.data.best >= resource.data.best;
+
+      allow delete: if false;
+    }
+  }
+}

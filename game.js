@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { profile, saveProfile, user, onlineEnabled, SKINS, UPGRADES, levelMult } from './profile.js';
+import { initMeta, isMetaOpen, openAuthFromGame } from './meta.js';
 
 // ================== CONSTANTS ==================
 const LANE_W = 2.6;
@@ -297,14 +299,25 @@ const player = new THREE.Group();
 const body = new THREE.Group();
 body.position.y = 0.95;
 player.add(body);
-const skin = lambert(0xffcc99), shirt = lambert(0xff5a36), pants = lambert(0x2b4c9b);
-const shoeMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-const capMat = lambert(0x1fbf6b);
+const skin = new THREE.MeshLambertMaterial(), shirt = new THREE.MeshLambertMaterial(), pants = new THREE.MeshLambertMaterial();
+const shoeMat = new THREE.MeshLambertMaterial();
+const capMat = new THREE.MeshLambertMaterial();
+const packMat = new THREE.MeshLambertMaterial();
+let skinShoes = 0xffffff;
+function applySkin() {
+  const s = SKINS.find((x) => x.id === profile.skin) || SKINS[0];
+  skin.color.setHex(s.c.skin); shirt.color.setHex(s.c.shirt); pants.color.setHex(s.c.pants);
+  capMat.color.setHex(s.c.cap); packMat.color.setHex(s.c.pack);
+  skinShoes = s.c.shoes;
+  if (!(power.boots > 0)) shoeMat.color.setHex(skinShoes);
+  const glow = s.glow || 0x000000;
+  shirt.emissive.setHex(glow); capMat.emissive.setHex(glow); packMat.emissive.setHex(glow);
+}
 body.add(box(0.72, 0.78, 0.42, shirt, 0, 0.27, 0));
 body.add(box(0.5, 0.5, 0.48, skin, 0, 0.92, 0));
 body.add(box(0.55, 0.16, 0.54, capMat, 0, 1.2, 0));
 body.add(box(0.48, 0.05, 0.28, capMat, 0, 1.13, -0.36));
-body.add(box(0.5, 0.55, 0.22, lambert(0xffc23d), 0, 0.3, 0.3)); // backpack
+body.add(box(0.5, 0.55, 0.22, packMat, 0, 0.3, 0.3)); // backpack
 function limb(x, y, w, h, mat, footMat) {
   const pivot = new THREE.Group();
   pivot.position.set(x, y, 0);
@@ -349,12 +362,13 @@ scene.add(blob);
 // ================== GAME STATE ==================
 let state = 'menu'; // menu | playing | paused | dying | over
 let speed = BASE_SPEED, runTime = 0, travelled = 0, nextRowAt = 0;
-let score = 0, coinCount = 0, best = store.get('rr_best', 0), bank = store.get('rr_bank', 0);
+let score = 0, coinCount = 0, revivesUsed = 0, reviveT = 0;
 let lane = 1, targetLane = 1, prevLane = 1, px = 0, py = 0, vy = 0, grounded = true;
 let rolling = 0, queueRoll = false, jumpBuffer = 0, invuln = 0, lastStumble = -99, sideCooldown = 0;
 let animTime = 0, runPhase = 0, dieT = 0, shake = 0, camX = 0, camY = 0;
 let jetLane = 1, nextJetCoinAt = 0;
 const power = {};
+const powerMax = {};
 const laneFree = [0, 0, 0];
 const laneBlock = [0, 0, 0];
 const obstacles = [];
@@ -597,7 +611,8 @@ function activate(type) {
     type = pick(TIMED);
   }
   const P = POWERS[type];
-  power[type] = P.dur;
+  power[type] = powerDur(type);
+  powerMax[type] = power[type];
   toast(`${P.icon} ${P.name.toUpperCase()}!`, P.color);
   if (type === 'jet') {
     grounded = false; vy = 0; rolling = 0; queueRoll = false;
@@ -607,6 +622,10 @@ function activate(type) {
   if (type === 'boots') shoeMat.color.setHex(0x3ddc84);
   renderPowerHud(true);
 }
+function powerDur(type) {
+  const lvl = (profile.upgrades && profile.upgrades[type]) || 0;
+  return (UPGRADES[type] ? UPGRADES[type].base : POWERS[type].dur) * levelMult(lvl);
+}
 function tickPowers(dt) {
   for (const k of TIMED) {
     if (power[k] > 0) {
@@ -614,7 +633,7 @@ function tickPowers(dt) {
       if (power[k] <= 0) {
         power[k] = 0;
         if (k === 'jet') { grounded = false; vy = 0; invuln = Math.max(invuln, 2); }
-        if (k === 'boots') shoeMat.color.setHex(0xffffff);
+        if (k === 'boots') shoeMat.color.setHex(skinShoes);
         renderPowerHud(true);
       }
     }
@@ -683,6 +702,7 @@ function die() {
 function act(a) {
   ensureAudio();
   if (state === 'menu' || state === 'over') { if (a === 'jump' || a === 'start') startGame(); return; }
+  if (state === 'revive') { if (a === 'start') doRevive(); else if (a === 'pause') finishRun(); return; }
   if (state === 'paused') { if (a === 'pause' || a === 'start') resume(); return; }
   if (state !== 'playing') return;
   if (a === 'pause') { pauseGame(); return; }
@@ -708,6 +728,7 @@ const KEYMAP = {
 window.addEventListener('keydown', (e) => {
   const a = KEYMAP[e.code];
   if (!a) return;
+  if (isMetaOpen() || (e.target && e.target.tagName === 'INPUT')) return;
   e.preventDefault();
   if (e.repeat) return;
   act(a);
@@ -736,6 +757,9 @@ $('resumeBtn').addEventListener('click', resume);
 $('pauseBtn').addEventListener('click', pauseGame);
 $('menuBtn1').addEventListener('click', toMenu);
 $('menuBtn2').addEventListener('click', toMenu);
+$('reviveBtn').addEventListener('click', doRevive);
+$('reviveSkip').addEventListener('click', finishRun);
+$('guestHintBtn').addEventListener('click', openAuthFromGame);
 $('soundBtn').addEventListener('click', () => {
   soundOn = !soundOn; store.set('rr_sound', soundOn); ensureAudio(); updateSoundBtn();
 });
@@ -759,7 +783,7 @@ function renderPowerHud(force) {
   }
   for (const el of box.children) {
     const k = el.dataset.k;
-    el.querySelector('i').style.width = `${clamp(power[k] / POWERS[k].dur, 0, 1) * 100}%`;
+    el.querySelector('i').style.width = `${clamp(power[k] / (powerMax[k] || POWERS[k].dur), 0, 1) * 100}%`;
   }
   $('mult').classList.toggle('hidden', !(power.x2 > 0));
 }
@@ -771,11 +795,8 @@ function updateHud() {
   if (c !== lastCoinTxt) { $('coinsVal').textContent = c; lastCoinTxt = c; }
   renderPowerHud(false);
 }
-$('legend').innerHTML = Object.values(POWERS).map((p) =>
-  `<div><span class="ic" style="color:${p.color}">${p.icon}</span><span>${p.name}<small>${p.desc}</small></span></div>`).join('');
-function refreshMenuStats() { $('bestMenu').textContent = best; $('bankMenu').textContent = bank; }
-refreshMenuStats();
 updateSoundBtn();
+initMeta({ powers: POWERS, onSkin: applySkin });
 
 // ================== FLOW ==================
 function clearWorld() {
@@ -787,12 +808,12 @@ function clearWorld() {
 function resetRun() {
   clearWorld();
   speed = BASE_SPEED; runTime = 0; travelled = 0; nextRowAt = 30;
-  score = 0; coinCount = 0;
+  score = 0; coinCount = 0; revivesUsed = 0;
   lane = targetLane = prevLane = 1; px = 0; py = 0; vy = 0; grounded = true;
   rolling = 0; queueRoll = false; jumpBuffer = 0; invuln = 0; lastStumble = -99; sideCooldown = 0; dieT = 0;
   for (const k of TIMED) power[k] = 0;
   laneFree.fill(0); laneBlock.fill(0);
-  shoeMat.color.setHex(0xffffff);
+  applySkin();
   body.rotation.set(0, 0, 0); body.position.y = 0.95; body.scale.set(1, 1, 1);
   player.rotation.set(0, 0, 0); player.visible = true;
   renderPowerHud(true);
@@ -800,8 +821,12 @@ function resetRun() {
 function startGame() {
   resetRun();
   state = 'playing';
-  for (const id of ['menu', 'over', 'pause']) $(id).classList.add('hidden');
+  for (const id of ['menu', 'over', 'pause', 'reviveOv']) $(id).classList.add('hidden');
   $('hud').classList.remove('hidden');
+  if (profile.startShields > 0) {
+    profile.startShields--; saveProfile();
+    setTimeout(() => { if (state === 'playing') activate('shield'); }, 400);
+  }
 }
 function pauseGame() {
   if (state !== 'playing') return;
@@ -817,20 +842,52 @@ function resume() {
 function toMenu() {
   resetRun();
   state = 'menu';
-  for (const id of ['over', 'pause', 'hud']) $(id).classList.add('hidden');
+  for (const id of ['over', 'pause', 'hud', 'reviveOv']) $(id).classList.add('hidden');
   $('menu').classList.remove('hidden');
-  refreshMenuStats();
 }
+const REVIVE_TIME = 5;
+const MAX_REVIVES = 2;
 function gameOver() {
+  if (profile.revives > 0 && revivesUsed < MAX_REVIVES) {
+    state = 'revive'; reviveT = REVIVE_TIME;
+    $('reviveLeft').textContent = profile.revives;
+    $('reviveOv').classList.remove('hidden');
+    return;
+  }
+  finishRun();
+}
+function doRevive() {
+  if (state !== 'revive' || profile.revives <= 0) return;
+  profile.revives--; revivesUsed++; saveProfile();
+  $('reviveOv').classList.add('hidden');
+  // убираем всё, что рядом, и даём неуязвимость
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    const o = obstacles[i];
+    if (o.z - o.len / 2 < 15 && o.z + o.len / 2 + o.ramp > -45) { scene.remove(o.mesh); obstacles.splice(i, 1); }
+  }
+  laneBlock.fill(0);
+  py = 0; vy = 0; grounded = true; rolling = 0; queueRoll = false; jumpBuffer = 0;
+  invuln = 2.5; lastStumble = -99; dieT = 0;
+  state = 'playing';
+  $('hud').classList.remove('hidden');
+  toast('❤️ ПОЕХАЛИ!', '#ff4d6d');
+  sfx.power();
+}
+function finishRun() {
+  if (state !== 'revive' && state !== 'dying') return;
   state = 'over';
+  $('reviveOv').classList.add('hidden');
   const fs = Math.floor(score);
-  const isRecord = fs > best;
-  if (isRecord) { best = fs; store.set('rr_best', best); }
-  bank += coinCount; store.set('rr_bank', bank);
+  const isRecord = fs > profile.best;
+  if (isRecord) profile.best = fs;
+  profile.coins += coinCount;
+  profile.games++;
+  saveProfile();
   $('finalScore').textContent = fs;
   $('finalCoins').textContent = coinCount;
-  $('finalBest').textContent = best;
+  $('finalBest').textContent = profile.best;
   $('newRecord').classList.toggle('hidden', !isRecord);
+  $('guestHint').classList.toggle('hidden', !(onlineEnabled && !user));
   $('over').classList.remove('hidden');
 }
 
@@ -885,7 +942,7 @@ function animatePlayer(dt) {
   const s = Math.sin(runPhase);
   body.position.y = 0.95; body.scale.set(1, 1, 1);
 
-  if (state === 'dying' || state === 'over') {
+  if (state === 'dying' || state === 'over' || state === 'revive') {
     const k = Math.min(1, dieT * 3);
     body.rotation.x = k * 1.35;
     body.position.y = 0.95 - k * 0.5;
@@ -1009,6 +1066,11 @@ function update(dt) {
     dieT += dt;
     curSpeed = speed * Math.max(0, 1 - dieT * 4);
     if (dieT > 1.1) gameOver();
+  } else if (state === 'revive') {
+    curSpeed = 0;
+    reviveT -= dt;
+    $('reviveTimer').style.width = `${clamp(reviveT / REVIVE_TIME, 0, 1) * 100}%`;
+    if (reviveT <= 0) finishRun();
   } else if (state === 'over') curSpeed = 0;
   else curSpeed = 9;
 
@@ -1069,6 +1131,3 @@ function frame(now) {
   renderer.render(scene, camera);
 }
 requestAnimationFrame(frame);
-
-// debug hook for testing
-window.__rr = { get state() { return state; }, get lane() { return targetLane; }, get py() { return py; }, get score() { return score; }, get speed() { return speed; }, obstacles, coins, power, act, activate, step: (dt) => update(dt), resume, addObstacle };

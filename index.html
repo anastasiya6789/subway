@@ -26,17 +26,22 @@
 
   <div id="toast"></div>
 
+  <!-- Главное меню -->
   <div id="menu" class="overlay">
     <div class="card">
+      <div class="acct" id="acctRow"></div>
       <h1>RAIL<span>RUSH</span></h1>
       <p class="sub">Беги по рельсам, уворачивайся от поездов, собирай монеты</p>
       <button class="big" id="playBtn">ИГРАТЬ</button>
-      <div class="stats"><div>Рекорд: <b id="bestMenu">0</b></div><div>Монет всего: <b id="bankMenu">0</b></div></div>
+      <div class="menu-row">
+        <button class="mid" id="shopBtn">🛒 Магазин</button>
+        <button class="mid" id="lbBtn">🏆 Рейтинг</button>
+      </div>
+      <div class="stats"><div>Рекорд: <b id="bestMenu">0</b></div><div><span class="coin-dot sm"></span> <b id="bankMenu">0</b></div></div>
       <div class="controls">
         <div class="ctrl-pc"><b>ПК:</b> <kbd>A</kbd><kbd>D</kbd> — влево/вправо, <kbd>W</kbd> — прыжок, <kbd>S</kbd> — подкат (в воздухе — резкий спуск), <kbd>P</kbd> — пауза</div>
         <div class="ctrl-mob"><b>Телефон:</b> свайпы ← → вбок, ↑ прыжок, ↓ подкат</div>
       </div>
-      <div class="legend" id="legend"></div>
       <button class="small" id="soundBtn">🔊 Звук: вкл</button>
     </div>
   </div>
@@ -49,6 +54,17 @@
     </div>
   </div>
 
+  <!-- Второй шанс -->
+  <div id="reviveOv" class="overlay hidden">
+    <div class="card">
+      <h2>Второй шанс?</h2>
+      <p class="sub">Осталось: <b id="reviveLeft">0</b> ❤️</p>
+      <button class="big" id="reviveBtn">❤️ ПРОДОЛЖИТЬ</button>
+      <div class="timer"><i id="reviveTimer"></i></div>
+      <button class="small" id="reviveSkip">Нет, закончить</button>
+    </div>
+  </div>
+
   <div id="over" class="overlay hidden">
     <div class="card">
       <h2>Врезался!</h2>
@@ -58,8 +74,63 @@
         <div><span>Монеты</span><b id="finalCoins">0</b></div>
         <div><span>Рекорд</span><b id="finalBest">0</b></div>
       </div>
+      <div id="guestHint" class="hint hidden"><button class="link" id="guestHintBtn">Зарегистрируйся</button>, чтобы попасть в рейтинг</div>
       <button class="big" id="againBtn">ЕЩЁ РАЗ</button>
+      <div class="menu-row">
+        <button class="mid" id="overShopBtn">🛒 Магазин</button>
+        <button class="mid" id="overLbBtn">🏆 Рейтинг</button>
+      </div>
       <button class="small" id="menuBtn2">В меню</button>
+    </div>
+  </div>
+
+  <!-- Магазин -->
+  <div id="shopOv" class="overlay meta hidden">
+    <div class="card wide">
+      <div class="card-head">
+        <h2>Магазин</h2>
+        <div class="pill balance"><span class="coin-dot"></span><span id="shopCoins">0</span></div>
+        <button class="x" data-close="shopOv" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="tabs">
+        <button id="tab-skins">Скины</button>
+        <button id="tab-upgrades">Прокачка</button>
+        <button id="tab-items">Предметы</button>
+      </div>
+      <div id="shopList"></div>
+    </div>
+  </div>
+
+  <!-- Рейтинг -->
+  <div id="lbOv" class="overlay meta hidden">
+    <div class="card wide">
+      <div class="card-head">
+        <h2>Рейтинг</h2>
+        <button class="x" data-close="lbOv" aria-label="Закрыть">✕</button>
+      </div>
+      <div id="lbMe" class="lb-me"></div>
+      <div id="lbList"></div>
+    </div>
+  </div>
+
+  <!-- Вход / регистрация -->
+  <div id="authOv" class="overlay meta hidden">
+    <div class="card">
+      <div class="card-head">
+        <h2>Аккаунт</h2>
+        <button class="x" data-close="authOv" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="tabs">
+        <button id="authTabLogin" type="button">Вход</button>
+        <button id="authTabReg" type="button">Регистрация</button>
+      </div>
+      <form id="authForm" autocomplete="on">
+        <input id="authNick" name="username" placeholder="Ник" maxlength="15" autocomplete="username" required />
+        <input id="authPass" name="password" type="password" placeholder="Пароль (мин. 6 символов)" minlength="6" required />
+        <div id="authErr" class="err"></div>
+        <div id="authHint" class="hint"></div>
+        <button class="big" id="authSubmit" type="submit">ВОЙТИ</button>
+      </form>
     </div>
   </div>
 
