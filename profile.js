@@ -1,6 +1,6 @@
 // Профиль игрока: монеты, рекорд, скины, прокачка.
 // Гость хранит профиль в localStorage, вошедший игрок — в Firestore (users/{uid}).
-import { firebaseConfig } from './firebase-config.js';
+import { firebaseConfig } from './firebase-config.js?v=3';
 
 const FB_VER = '10.12.2';
 const GUEST_KEY = 'rr_profile_guest';

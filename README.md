@@ -88,6 +88,14 @@ git push -u origin main
 
 Дальше на GitHub: **Settings → Pages → Source: Deploy from a branch → `main` / `(root)` → Save**. Через минуту игра будет на `https://<твой-ник>.github.io/<репозиторий>/`.
 
+### Обновление игры
+
+GitHub Pages кэширует файлы до 10 минут. Чтобы у игроков не смешались старые и новые файлы, при каждом обновлении увеличивай номер `?v=` во всех файлах сразу (сейчас `v=3`):
+
+```bash
+grep -rl "?v=3" index.html game.js meta.js profile.js | xargs sed -i '' 's/?v=3/?v=4/g'
+```
+
 ## Файлы
 
 - `index.html` — разметка и меню

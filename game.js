@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { profile, saveProfile, user, onlineEnabled, SKINS, UPGRADES, levelMult } from './profile.js';
-import { initMeta, isMetaOpen, openAuthFromGame } from './meta.js';
+import { profile, saveProfile, user, onlineEnabled, SKINS, UPGRADES, levelMult } from './profile.js?v=3';
+import { initMeta, isMetaOpen, openAuthFromGame } from './meta.js?v=3';
 
 // ================== CONSTANTS ==================
 const LANE_W = 2.6;

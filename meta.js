@@ -2,8 +2,8 @@
 import {
   profile, user, onlineEnabled, onProfileChange, SKINS, UPGRADES, UPGRADE_COSTS, MAX_LEVEL, levelMult, ITEMS,
   register, login, logout, fetchLeaderboard, fetchMyRank, buySkin, equipSkin, buyUpgrade, buyItem, NICK_RE, initOnline,
-} from './profile.js';
-import * as P from './profile.js';
+} from './profile.js?v=3';
+import * as P from './profile.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
