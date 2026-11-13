@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#3a8dde" />
+  <title>Rail Rush</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚆</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="pill" id="score">0</div>
+      <button class="pill btn-icon" id="pauseBtn" aria-label="Пауза">❚❚</button>
+      <div class="pill" id="coins"><span class="coin-dot"></span><span id="coinsVal">0</span></div>
+    </div>
+    <div id="mult" class="hidden">x2</div>
+    <div id="powers"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="menu" class="overlay">
+    <div class="card">
+      <h1>RAIL<span>RUSH</span></h1>
+      <p class="sub">Беги по рельсам, уворачивайся от поездов, собирай монеты</p>
+      <button class="big" id="playBtn">ИГРАТЬ</button>
+      <div class="stats"><div>Рекорд: <b id="bestMenu">0</b></div><div>Монет всего: <b id="bankMenu">0</b></div></div>
+      <div class="controls">
+        <div class="ctrl-pc"><b>ПК:</b> <kbd>A</kbd><kbd>D</kbd> — влево/вправо, <kbd>W</kbd> — прыжок, <kbd>S</kbd> — подкат (в воздухе — резкий спуск), <kbd>P</kbd> — пауза</div>
+        <div class="ctrl-mob"><b>Телефон:</b> свайпы ← → вбок, ↑ прыжок, ↓ подкат</div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <button class="small" id="soundBtn">🔊 Звук: вкл</button>
+    </div>
+  </div>
+
+  <div id="pause" class="overlay hidden">
+    <div class="card">
+      <h2>Пауза</h2>
+      <button class="big" id="resumeBtn">ПРОДОЛЖИТЬ</button>
+      <button class="small" id="menuBtn1">В меню</button>
+    </div>
+  </div>
+
+  <div id="over" class="overlay hidden">
+    <div class="card">
+      <h2>Врезался!</h2>
+      <div id="newRecord" class="hidden">🏆 НОВЫЙ РЕКОРД!</div>
+      <div class="result">
+        <div><span>Очки</span><b id="finalScore">0</b></div>
+        <div><span>Монеты</span><b id="finalCoins">0</b></div>
+        <div><span>Рекорд</span><b id="finalBest">0</b></div>
+      </div>
+      <button class="big" id="againBtn">ЕЩЁ РАЗ</button>
+      <button class="small" id="menuBtn2">В меню</button>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
